@@ -9,6 +9,8 @@ public class W_Umrechner {
         bestandswaehrungen();
     }
 
+    
+
     private void bestandswaehrungen(){
         
         Waehrungen[0] = "EUR";
@@ -75,7 +77,7 @@ public class W_Umrechner {
     public int kursWechsel(String bezeichnung,double neuerKurs){
 
         for (int i = 0; i < Waehrungen.length; i++) {
-            if (bezeichnung.equals(Waehrungen[i])){
+            if (Waehrungen[i] != null && bezeichnung.equals(Waehrungen[i])){
                 kurse[i]=neuerKurs;
                 return 1;
             }
@@ -83,4 +85,22 @@ public class W_Umrechner {
         return -1;
     }
 
+    public String[] getAktiveWaehrungen(){
+        
+        int count=0;
+
+        for (String w : Waehrungen) {
+            if (w != null) count++;
+        }
+
+        String[] res = new String[count];
+        int idx=0;
+
+        for (String w : Waehrungen) {
+            if (w != null) res[idx++]=w;
+        }
+        
+        
+        return res;
+    }
 }
