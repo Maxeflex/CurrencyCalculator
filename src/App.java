@@ -6,11 +6,25 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 public class App {
+
+    static CurrencyService service = new CurrencyService();
+
+    @SafeVarargs
+    public static void refreshDropdowns(JComboBox<String>... dropdowns) {
+        for (JComboBox<String> dd : dropdowns) {
+            dd.removeAllItems(); // leeren
+
+            for (String currency : service.getCurrencies()) {
+                dd.addItem(currency);
+            }
+        }
+    }
 
     public static void main(String[] args) {
         //### define Containers 
@@ -30,19 +44,19 @@ public class App {
 
         //### define Components
         JTextField inputValue = new JTextField(); // Input for converting currency
-        JTextField newValue = new JTextField(); // Input for adding or changing currency
-        JTextField newCurrency = new JTextField();
+        JTextField newCurrencyValueInput = new JTextField(); // Input for 
+        JTextField updateCurrencyValueInput = new JTextField();
+        JTextField newCurrencyNameInput = new JTextField();
         JTextArea outputValue = new JTextArea(); // Displays the result
-        JButton calc = new JButton("Calculate"); // triggers the calculation
-        JButton edit = new JButton("Edit"); // triggers the change currency
+        JButton updateCurrency = new JButton("UPDATE"); // triggers the change currency
         JButton show = new JButton("SHOW");
         JButton addCurrency = new JButton("ADD");
-        String[] choices = {"EURO", "USD", "CHOICE 3", "CHOICE 4", "CHOICE 5", "CHOICE 6"};
-        JComboBox<String> ddInput = new JComboBox<String>(choices); //Dropdown for input currency
-        JComboBox<String> ddTarget = new JComboBox<String>(choices); //Dropdown for output currency
-        JComboBox<String> ddEditA = new JComboBox<String>(choices); //Dropdown for adding or editing currency
-        JComboBox<String> ddEditB = new JComboBox<String>(choices); //Dropdown for adding or editing currency
-        JComboBox<String> ddTableSelector = new JComboBox<String>(choices);
+        JComboBox<String> ddInput = new JComboBox<>(); //Dropdown for input currency
+        JComboBox<String> ddTarget = new JComboBox<>(); //Dropdown for output currency
+        JComboBox<String> ddEdit = new JComboBox<>(); //Dropdown for adding or editing currency
+        JComboBox<String> ddTableSelector = new JComboBox<>();
+
+        refreshDropdowns(ddInput, ddTarget, ddEdit, ddTableSelector);
         //### add Components and define position
         // Build convertSection
         convertSection.setLayout(new GridLayout(3, 3));
@@ -52,7 +66,7 @@ public class App {
         convertSection.add(new JLabel("OUTPUT"));
 
         convertSection.add(inputValue);
-        convertSection.add(calc);
+        convertSection.add(new JLabel());
         convertSection.add(outputValue);
 
         convertSection.add(ddInput);
@@ -60,52 +74,91 @@ public class App {
         convertSection.add(ddTarget);
 
         // Build addSection
-        editSection.setLayout(new GridLayout(5, 3));
+        editSection.setLayout(new GridLayout(7, 3));
 
         editSection.add(new JLabel()); // EMPTY
         editSection.add(new JLabel("Change Currency"));
         editSection.add(new JLabel()); // EMPTY
 
-        editSection.add(ddEditA);
-        editSection.add(newValue);
-        editSection.add(ddEditB);
-
-        editSection.add(new JLabel());
-        editSection.add(edit);
+        editSection.add(new JLabel("Choose"));
+        editSection.add(new JLabel("New Rate"));
         editSection.add(new JLabel());
 
+        editSection.add(ddEdit);
+        editSection.add(updateCurrencyValueInput);
+        editSection.add(updateCurrency);
+
+        editSection.add(new JLabel()); // EMPTY
         editSection.add(new JLabel("New Currency"));
-        editSection.add(newCurrency);
+        editSection.add(new JLabel()); // EMPTY
+
+        editSection.add(new JLabel("Name"));
+        editSection.add(new JLabel("Rate"));
+        editSection.add(new JLabel());
+
+        editSection.add(newCurrencyNameInput);
+        editSection.add(newCurrencyValueInput);
         editSection.add(addCurrency);
 
-        tableSection.add(new JLabel("Show Rates for:"));
+        tableSection.add(new JLabel("Show Rates form EUR to ..."));
         tableSection.add(ddTableSelector);
         tableSection.add(show);
 
+        // Baue ich gleich um.
         show.addActionListener(e -> {
             tableSection.removeAll();
-            tableSection.setLayout(new GridLayout(3 + choices.length - 1, 3));
-            tableSection.add(new JLabel("Show Rates for:"));
+            tableSection.setLayout(new GridLayout(3, 3));
+            tableSection.add(new JLabel("Show Rates form EUR to ..."));
             tableSection.add(ddTableSelector);
             tableSection.add(show);
-            String value = (String) ddTableSelector.getSelectedItem();
-            tableSection.add(new JLabel("CURRENCY A"));
-            tableSection.add(new JLabel("CURRENCY B"));
-            tableSection.add(new JLabel("RATE"));
-            for (int i = 0; i < choices.length; i++) {
-                if (choices[i] != value) {
-                    tableSection.add(new JLabel(value));
-                    tableSection.add(new JLabel(choices[i]));
-                    tableSection.add(new JLabel("Value"));
-                }
-            }
+
+            tableSection.add(new JLabel("CURRENCY:"));
+            tableSection.add(new JLabel("RATE:"));
+            tableSection.add(new JLabel());
+            String target = (String) ddTableSelector.getSelectedItem();
+            tableSection.add(new JLabel(target));
+            tableSection.add(new JLabel(String.valueOf(service.getRates(target))));
+            tableSection.add(new JLabel());
+
             win.pack();
         });
 
+        inputValue.addActionListener(e -> {
+            try {
+                String from = (String) ddInput.getSelectedItem();
+                String to = (String) ddTarget.getSelectedItem();
+                double amount = Double.parseDouble(inputValue.getText());
+                outputValue.setText(String.valueOf(service.convert(amount, from, to)));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        updateCurrency.addActionListener(e -> {
+            try {
+                String from = (String) ddEdit.getSelectedItem();
+                double amount = Double.parseDouble(updateCurrencyValueInput.getText());
+                service.updateCurrency(from, amount);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        addCurrency.addActionListener(e -> {
+            try {
+                String from = newCurrencyNameInput.getText();
+                double amount = Double.parseDouble(newCurrencyValueInput.getText());
+                service.addCurrency(from, amount);
+                refreshDropdowns(ddInput, ddTarget, ddEdit, ddTableSelector);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
         win.add(panel); // add panel to main Window
-        panel.add(new JLabel("CURRENCY CALCULATOR"),BorderLayout.NORTH);
-        panel.add(convertSection,BorderLayout.CENTER);
-        panel.add(addSection,BorderLayout.SOUTH);
+        panel.add(new JLabel("CURRENCY CALCULATOR"), BorderLayout.NORTH);
+        panel.add(convertSection, BorderLayout.CENTER);
+        panel.add(addSection, BorderLayout.SOUTH);
         addSection.add(editSection, BorderLayout.NORTH);
         addSection.add(tableSection, BorderLayout.CENTER);
         win.pack(); // compute layout
